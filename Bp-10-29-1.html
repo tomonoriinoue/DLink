@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Craft Beer Mixer – Mobile Brew Lab (v15)</title>
+<style>
+:root {
+  --bg: #070b12;
+  --panel: #101826;
+  --accent: #f5b301;
+  --accent-glow: 0 0 16px rgba(245,179,1,.6);
+  --ink: #e6edf3;
+  --muted: #99a8ba;
+  --chip-bg: rgba(0,0,0,.6);
+  --chip-border: rgba(255,255,255,.4);
+  --chip-text: #fff;
+  --card-bg: rgba(16,24,38,.8);
+  --card-border: #ffffff22;
+}
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body{
+  margin:0;
+  font-family:'Poppins','Segoe UI',system-ui,sans-serif;
+  background:radial-gradient(1200px 800px at 70% -20%, #1a2033 0%, #070b12 60%);
+  color:var(--ink);
+  overflow-x:hidden;
+}
+.app{max-width:480px;margin:0 auto;padding:20px 16px 120px;}
+.screen{display:none}
+.screen.active{display:block;animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+header{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid #ffffff10;margin-bottom:16px;}
+.logo{font-weight:800;font-size:18px;color:var(--accent);text-shadow:var(--accent-glow);}
+.pill-head{background:linear-gradient(90deg,#f5b301,#ffdd66);color:#1a1a1a;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;box-shadow:0 0 10px rgba(245,179,1,.6);min-width:max-content;}
+.btn{border:none;border-radius:12px;padding:14px;font-weight:700;font-size:15px;cursor:pointer;transition:.2s;width:100%;line-height:1.2;}
+.btn.primary{background:linear-gradient(90deg,#f5b301,#ffcf48);color:#1a1a1a;box-shadow:0 0 18px rgba(245,179,1,.5);}
+.btn.ghost{background:rgba(0,0,0,.4);color:var(--muted);border:1px solid #ffffff12;}
+.btn:active{transform:scale(.98);}
+.action-bar{display:flex;flex-direction:column;gap:12px;margin-top:24px;}
+
+/* small helper text */
+.hint-top{color:var(--muted);font-size:11px;line-height:1.4;text-align:center;margin-top:-8px;margin-bottom:16px;max-width:320px;margin-left:auto;margin-right:auto;}
+
+.brew-stage-wrapper{display:flex;flex-direction:column;align-items:center;justify-content:center;margin-bottom:24px;}
+.ingredient-ring{position:relative;width:min(90vw,360px);height:min(90vw,360px);max-width:360px;max-height:360px;min-width:260px;min-height:260px;margin:0 auto;}
+
+/* Pot */
+.brew-pot{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:120px;height:160px;border-radius:16px;background:linear-gradient(180deg,#e7eef9 0%,#a8b5cc 100%);box-shadow:0 0 40px rgba(245,179,1,.3),0 20px 40px #000a;border:1px solid #ffffff33;overflow:hidden;}
+.pot-gloss{position:absolute;inset:0;border-radius:16px;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.2) 18%,transparent 32%);mix-blend-mode:screen;}
+.liquid{position:absolute;left:6%;right:6%;bottom:6%;height:0%;border-radius:10px;background:linear-gradient(#ffcf4a,#e39600);filter:brightness(1.05);overflow:hidden;}
+.liquid::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.4),transparent 70%);mix-blend-mode:screen;opacity:var(--haze-alpha,0);}
+.foam-cap{position:absolute;left:6%;right:6%;height:0px;border-radius:10px;background:linear-gradient(to top,rgba(255,247,232,0.9)16%,rgba(255,255,255,0)55%);top:20px;box-shadow:0 0 18px rgba(255,255,255,.4);transition:height .4s ease;}
+.temp-bar{position:absolute;right:-28px;top:20px;width:8px;height:120px;border-radius:6px;background:#0b0f14;border:1px solid #ffffff22;display:flex;align-items:flex-end;}
+.temp-fill{width:100%;border-radius:6px;background:#00c2a8;height:40px;transition:all .3s ease;}
+.temp-label{position:absolute;left:50%;transform:translateX(calc(-50% + 14px));bottom:-20px;font-size:11px;font-weight:600;color:#00c2a8;}
+.floating-popup-layer{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;font-size:13px;font-weight:600;color:var(--accent);}
+.popupFloat{position:absolute;animation:riseout 1.2s ease forwards;white-space:nowrap;}
+@keyframes riseout{0%{opacity:0;transform:translate(-50%,-10px)}20%{opacity:1;transform:translate(-50%,-30px)}100%{opacity:0;transform:translate(-50%,-60px)}}
+
+/* Ingredient Orbs */
+.ing-orb{position:absolute;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:50%;box-shadow:0 0 16px rgba(245,179,1,.25),0 8px 20px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:none;border:1px solid rgba(255,255,255,.35);background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.55)0%,rgba(255,255,255,0)60%);color:#fff;font-weight:600;text-align:center;text-shadow:0 2px 4px rgba(0,0,0,.7);padding:6px 4px;}
+.ing-orb[data-key="aromaHop"]   { background-color:#29a9ff; }
+.ing-orb[data-key="bitterHop"]  { background-color:#00c27a; }
+.ing-orb[data-key="malt"]       { background-color:#c0803a; }
+.ing-orb[data-key="wheat"]      { background-color:#e5be2a; }
+.ing-orb[data-key="freshFruit"] { background-color:#ff4d8f; }
+.ing-orb[data-key="driedFruit"] { background-color:#7a43ff; }
+.ing-orb[data-key="spice"]      { background-color:#ff8f3d; }
+
+.orb-icon{font-size:20px;line-height:1;}
+.orb-name{font-size:10px;font-weight:600;line-height:1.2;margin-top:4px;color:#fff;}
+.orb-level{min-width:38px;padding:2px 6px;border-radius:999px;font-size:10px;font-weight:700;line-height:1.2;text-align:center;background:var(--chip-bg);border:1px solid var(--chip-border);color:var(--chip-text);box-shadow:0 2px 4px rgba(0,0,0,.8),0 0 8px rgba(0,0,0,.6);margin-top:4px;}
+
+.brew-pot.highlight{box-shadow:0 0 30px rgba(245,179,1,.6),0 0 80px rgba(245,179,1,.3);}
+
+/* Flavor profile card */
+#flavorCardWrap{margin-top:28px;display:none;}
+.profile-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;padding:16px;color:var(--ink);box-shadow:0 20px 40px rgba(0,0,0,.8);font-size:13px;line-height:1.4;}
+.profile-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.profile-title{font-weight:600;font-size:14px;color:var(--accent);text-shadow:0 0 8px rgba(245,179,1,.6);} 
+.profile-style{font-size:12px;color:var(--muted);}
+.flavor-row{display:flex;justify-content:space-between;align-items:center;margin:6px 0;}
+.flavor-label-col{flex:0 0 50%;min-width:0;}
+.flavor-name{font-size:12px;color:var(--ink);font-weight:600;line-height:1.3;}
+.flavor-bar-col{flex:1;display:flex;align-items:center;}
+.flavor-bar{flex:1;height:6px;border-radius:4px;margin-left:8px;background:#0006;border:1px solid #ffffff22;position:relative;overflow:hidden;}
+.flavor-fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:linear-gradient(90deg,#f5b301 0%,#ffcf48 100%);box-shadow:0 0 10px rgba(245,179,1,.6);} 
+
+/* Modal / Toast */
+.modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.6);padding:16px;z-index:9999;}
+.modal.show{display:grid;}
+.modal .box{width:min(480px,100%);background:#0e1624;border:1px solid #ffffff26;border-radius:16px;padding:16px;}
+.modal .box h3{margin-top:0;color:#fff;font-size:15px;font-weight:600;text-align:center;}
+.modal .current-val{color:#fff;font-size:28px;font-weight:700;text-align:center;letter-spacing:-0.03em;text-shadow:0 0 10px rgba(245,179,1,.6);margin-bottom:8px;}
+.modal .current-label{color:var(--muted);font-size:12px;text-align:center;margin-bottom:16px;}
+.modal input[type="range"]{width:100%;accent-color:var(--accent);} 
+.modal .tip{color:var(--muted);font-size:11px;text-align:center;margin-top:8px;}
+.toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#1d2838;color:#fff;padding:10px 14px;border-radius:10px;opacity:0;transition:.3s;z-index:999;}
+.toast.show{opacity:1;}
+
+#styleGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.style-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;padding:12px;box-shadow:0 20px 40px #000a;font-size:14px;line-height:1.4;color:var(--ink);}
+.style-card b{font-size:15px;display:block;margin-bottom:4px;color:var(--accent);text-shadow:0 0 8px rgba(245,179,1,.6);}
+.style-card p{margin:0 0 8px 0;font-size:12px;color:var(--muted);} 
+.btn.small{font-size:14px;padding:10px;border-radius:10px;}
+
+#finalBeer{max-width:100%;width:100%;height:auto;border-radius:14px;border:1px solid #ffffff22;background:#000;box-shadow:0 20px 40px #000a;display:block;margin:0 auto 16px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">CRAFT MIXER</div>
+    <div class="pill-head" id="stylePill">No style</div>
+  </header>
+
+  <!-- SCREEN 1: STYLE PICK -->
+  <section class="screen active" id="screen1">
+    <h2>[Step 1] Choose your style</h2>
+    <div id="styleGrid"></div>
+    <div class="action-bar">
+      <button class="btn primary" id="goStep2Btn" disabled>Next →</button>
+    </div>
+  </section>
+
+  <!-- SCREEN 2: MIX -->
+  <section class="screen" id="screen2">
+    <h2>[Step 2] Mix your ingredients</h2>
+    <div class="hint-top">Tap to add. Long-press to fine tune the level (1–7).</div>
+
+    <div class="brew-stage-wrapper">
+      <div class="ingredient-ring" id="ingredientRing">
+        <!-- Pot in center -->
+        <div class="brew-pot" id="brewPot">
+          <div class="liquid" id="liquid"></div>
+          <div class="foam-cap" id="foamCap"></div>
+          <div class="temp-bar"><div class="temp-fill" id="tempFill"></div><div class="temp-label" id="tempLabel">68°F</div></div>
+          <div class="pot-gloss"></div>
+        </div>
+        <div class="floating-popup-layer" id="popupLayer"></div>
+
+        <!-- Ingredient orbs (with names) -->
+        <div class="ing-orb" data-key="aromaHop">
+          <div class="orb-icon">🌿</div>
+          <div class="orb-name">Aroma Hop</div>
+          <div class="orb-level" id="lvl-aromaHop">Lv 0</div>
+        </div>
+        <div class="ing-orb" data-key="bitterHop">
+          <div class="orb-icon">🌿</div>
+          <div class="orb-name">Bitter Hop</div>
+          <div class="orb-level" id="lvl-bitterHop">Lv 0</div>
+        </div>
+        <div class="ing-orb" data-key="malt">
+          <div class="orb-icon">🌾</div>
+          <div class="orb-name">Malt</div>
+          <div class="orb-level" id="lvl-malt">Lv 0</div>
+        </div>
+        <div class="ing-orb" data-key="wheat">
+          <div class="orb-icon">🌾</div>
+          <div class="orb-name">Wheat</div>
+          <div class="orb-level" id="lvl-wheat">Lv 0</div>
+        </div>
+        <div class="ing-orb" data-key="freshFruit">
+          <div class="orb-icon">🍑</div>
+          <div class="orb-name">Fresh Fruit</div>
+          <div class="orb-level" id="lvl-freshFruit">Lv 0</div>
+        </div>
+        <div class="ing-orb" data-key="driedFruit">
+          <div class="orb-icon">🍇</div>
+          <div class="orb-name">Dried Fruit</div>
+          <div class="orb-level" id="lvl-driedFruit">Lv 0</div>
+        </div>
+        <div class="ing-orb" data-key="spice">
+          <div class="orb-icon">🧂</div>
+          <div class="orb-name">Spice</div>
+          <div class="orb-level" id="lvl-spice">Lv 0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flavor profile (revealed after Start Brew) -->
+    <div id="flavorCardWrap">
+      <div class="profile-card">
+        <div class="profile-header">
+          <div>
+            <div class="profile-title">Flavor Profile (Preview)</div>
+            <div class="profile-style" id="profileStyle">—</div>
+          </div>
+        </div>
+
+        <div class="flavor-row">
+          <div class="flavor-label-col"><div class="flavor-name">Aroma Hop</div></div>
+          <div class="flavor-bar-col"><div class="flavor-bar"><div class="flavor-fill" id="bar-aromaHop" style="width:0%"></div></div></div>
+        </div>
+        <div class="flavor-row">
+          <div class="flavor-label-col"><div class="flavor-name">Bitterness</div></div>
+          <div class="flavor-bar-col"><div class="flavor-bar"><div class="flavor-fill" id="bar-bitterness" style="width:0%"></div></div></div>
+        </div>
+        <div class="flavor-row">
+          <div class="flavor-label-col"><div class="flavor-name">Malt Sweetness</div></div>
+          <div class="flavor-bar-col"><div class="flavor-bar"><div class="flavor-fill" id="bar-maltSweet" style="width:0%"></div></div></div>
+        </div>
+        <div class="flavor-row">
+          <div class="flavor-label-col"><div class="flavor-name">Body & Richness</div></div>
+          <div class="flavor-bar-col"><div class="flavor-bar"><div class="flavor-fill" id="bar-bodyRich" style="width:0%"></div></div></div>
+        </div>
+        <div class="flavor-row">
+          <div class="flavor-label-col"><div class="flavor-name">Fruitiness</div></div>
+          <div class="flavor-bar-col"><div class="flavor-bar"><div class="flavor-fill" id="bar-fruitiness" style="width:0%"></div></div></div>
+        </div>
+        <div class="flavor-row">
+          <div class="flavor-label-col"><div class="flavor-name">Spiciness</div></div>
+          <div class="flavor-bar-col"><div class="flavor-bar"><div class="flavor-fill" id="bar-spiciness" style="width:0%"></div></div></div>
+        </div>
+        <div class="flavor-row">
+          <div class="flavor-label-col"><div class="flavor-name">Freshness / Crispness</div></div>
+          <div class="flavor-bar-col"><div class="flavor-bar"><div class="flavor-fill" id="bar-freshness" style="width:0%"></div></div></div>
+        </div>
+        <div class="flavor-row">
+          <div class="flavor-label-col"><div class="flavor-name">Yeast Character</div></div>
+          <div class="flavor-bar-col"><div class="flavor-bar"><div class="flavor-fill" id="bar-yeast" style="width:0%"></div></div></div>
+        </div>
+        <div class="flavor-row">
+          <div class="flavor-label-col"><div class="flavor-name">Sourness</div></div>
+          <div class="flavor-bar-col"><div class="flavor-bar"><div class="flavor-fill" id="bar-sour" style="width:0%"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action buttons for Step 2 -->
+    <div class="action-bar" id="actionsStep2">
+      <button class="btn ghost" id="backBtn">Back</button>
+      <button class="btn primary" id="startBrewBtn">Start Brew</button>
+    </div>
+
+    <!-- After Start Brew: only Decide -->
+    <div class="action-bar" id="decideBar" style="display:none;">
+      <button class="btn primary" id="decideBtn">Decide 🍺</button>
+    </div>
+  </section>
+
+  <!-- SCREEN 3: FINAL -->
+  <section class="screen" id="screen3">
+    <h2>[Step 3] Your Beer is Ready 🍻</h2>
+    <canvas id="finalBeer" width="720" height="420"></canvas>
+    <div class="action-bar" style="margin-top:20px;">
+      <button class="btn primary" id="againBtn">One more</button>
+    </div>
+  </section>
+</div>
+
+<!-- Toast feedback -->
+<div class="toast" id="toast"></div>
+
+<!-- Slider modal (long-press adjust) -->
+<div class="modal" id="sliderModal">
+  <div class="box">
+    <h3 id="modalLabel">Adjust</h3>
+    <div class="current-val" id="modalCurrentVal">0</div>
+    <div class="current-label">Current Level</div>
+    <input type="range" id="modalRange" min="1" max="7" value="1" />
+    <div class="tip">Slide to fine tune (1-7)</div>
+    <div style="margin-top:16px;display:flex;gap:10px;">
+      <button class="btn ghost" id="modalCancel" style="flex:1;">Cancel</button>
+      <button class="btn primary" id="modalOk" style="flex:1;">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/*************************************************
+ * FLAVOR MODEL  (7 inputs → 9 dimensions)
+ *************************************************/
+function computeFlavorDimensions(levels){
+  const norm = v => (v||0)/7;
+  const L = levels;
+
+  const aromaHopScore = 0.8*norm(L.aromaHop) + 0.2*norm(L.freshFruit);
+  const bitternessScore = 0.9*norm(L.bitterHop) + 0.1*norm(L.spice);
+  const maltSweetScore = 0.85*norm(L.malt) + 0.15*norm(L.wheat);
+  const bodyRichScore = 0.6*norm(L.malt) + 0.4*norm(L.wheat);
+  const fruitinessScore = 0.7*norm(L.freshFruit) + 0.3*norm(L.driedFruit);
+  const spicinessScore = 0.8*norm(L.spice) + 0.1*norm(L.wheat) + 0.1*norm(L.driedFruit);
+
+  let freshnessBase = 0.4*norm(L.bitterHop)
+                    + 0.4*norm(L.freshFruit)
+                    + 0.2*(1-norm(L.malt));
+  freshnessBase -= 0.2*norm(L.wheat);
+  const freshnessScore = clamp01(freshnessBase);
+
+  const yeastScore = 0.4*norm(L.wheat) + 0.4*norm(L.freshFruit) + 0.2*norm(L.spice);
+  const sourScore = 0.8*norm(L.freshFruit) + 0.2*norm(L.bitterHop);
+
+  function pct(x){return Math.round(clamp01(x)*100);} // → 0-100%
+  return {
+    aromaHop:    pct(aromaHopScore),
+    bitterness:  pct(bitternessScore),
+    maltSweet:   pct(maltSweetScore),
+    bodyRich:    pct(bodyRichScore),
+    fruitiness:  pct(fruitinessScore),
+    spiciness:   pct(spicinessScore),
+    freshness:   pct(freshnessScore),
+    yeast:       pct(yeastScore),
+    sour:        pct(sourScore)
+  };
+}
+
+/*************************************************/
+// Beer Style Defaults
+const STYLES={
+  IPA:{desc:"Citrus & tropical aroma",defaults:{aromaHop:6,bitterHop:5,malt:3,wheat:2,driedFruit:2,freshFruit:5,spice:2},hue:"#f0a400"},
+  PA:{desc:"Balanced malt & hops",defaults:{aromaHop:5,bitterHop:4,malt:4,wheat:2,driedFruit:2,freshFruit:4,spice:3},hue:"#e59d2a"},
+  "Wheat Beer":{desc:"Smooth, creamy, subtle banana & clove",defaults:{aromaHop:3,bitterHop:2,malt:3,wheat:6,driedFruit:2,freshFruit:4,spice:5},hue:"#f2da72"},
+  Pilsner:{desc:"Crisp, floral, clean bitterness",defaults:{aromaHop:3,bitterHop:3,malt:4,wheat:2,driedFruit:2,freshFruit:3,spice:2},hue:"#e5c44a"}
+};
+
+/*************************************************/
+// Global state
+let currentStyle=null;
+let levels={aromaHop:0,bitterHop:0,malt:0,wheat:0,driedFruit:0,freshFruit:0,spice:0};
+let dragState=null;
+let longPressTimer=null;
+let orbsInitialized=false;
+let pendingSliderKey=null;
+let pendingSliderVal=0;
+let hasStartedBrew=false;
+
+/*************************************************/
+// DOM helpers
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+function clamp01(x){return Math.max(0,Math.min(1,x));}
+function show(id){
+  $$('.screen').forEach(s=>s.classList.remove('active'));
+  $('#'+id).classList.add('active');
+  window.scrollTo({top:0,behavior:'auto'});
+}
+function toast(msg){
+  const t=$('#toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1500);
+}
+
+/*************************************************/
+// Flavor Profile Preview Updater (Step2 card)
+function setBarPct(sel,p){const el=$(sel);if(el){el.style.width=(p||0)+'%';}}
+function updateFlavorPreview(){
+  if(!hasStartedBrew) return;
+  const dim=computeFlavorDimensions(levels);
+  $('#profileStyle').textContent = currentStyle || 'Custom';
+  setBarPct('#bar-aromaHop',    dim.aromaHop);
+  setBarPct('#bar-bitterness',  dim.bitterness);
+  setBarPct('#bar-maltSweet',   dim.maltSweet);
+  setBarPct('#bar-bodyRich',    dim.bodyRich);
+  setBarPct('#bar-fruitiness',  dim.fruitiness);
+  setBarPct('#bar-spiciness',   dim.spiciness);
+  setBarPct('#bar-freshness',   dim.freshness);
+  setBarPct('#bar-yeast',       dim.yeast);
+  setBarPct('#bar-sour',        dim.sour);
+}
+function revealFlavorPreview(){
+  hasStartedBrew=true;
+  $('#flavorCardWrap').style.display='block';
+  $('#actionsStep2').style.display='none';
+  $('#decideBar').style.display='flex';
+  updateFlavorPreview();
+}
+
+/*************************************************/
+// Step 1: build style cards
+function buildStyleCards(){
+  const g=$('#styleGrid');
+  g.innerHTML='';
+  for(const[name,info] of Object.entries(STYLES)){
+    const card=document.createElement('div');
+    card.className='style-card';
+    card.innerHTML=`<b>${name}</b><p>${info.desc}</p><button class="btn primary small">Select</button>`;
+    card.querySelector('button').addEventListener('click',()=>selectStyle(name));
+    g.appendChild(card);
+  }
+}
+function selectStyle(name){
+  currentStyle=name;
+  levels={...STYLES[name].defaults};
+  updateOrbLabelsFromLevels();
+  $('#stylePill').textContent='Style: '+name;
+  const nextBtn=$('#goStep2Btn');
+  if(nextBtn){
+    nextBtn.disabled=false;
+    nextBtn.style.opacity='1';
+    nextBtn.style.filter='none';
+  }
+  show('screen2');
+  requestAnimationFrame(initScreen2);
+}
+
+/*************************************************/
+// Step 2 init / layout
+function initScreen2(){
+  layoutOrbs();
+  if(!orbsInitialized){
+    $$('.ing-orb').forEach(o=>attachOrbEvents(o));
+    orbsInitialized=true;
+  }
+  applyBrewPhysics();
+  if(hasStartedBrew){updateFlavorPreview();}
+}
+function layoutOrbs(){
+  const ring=$('#ingredientRing');
+  const orbs=$$('.ing-orb');
+  const N=orbs.length;
+  const radius=ring.offsetWidth*0.38;
+  const cx=ring.offsetWidth/2,cy=ring.offsetHeight/2;
+  orbs.forEach((orb,i)=>{
+    const angleDeg=(360/N)*i-90;
+    const rad=angleDeg*Math.PI/180;
+    orb.style.left=cx+radius*Math.cos(rad)+'px';
+    orb.style.top =cy+radius*Math.sin(rad)+'px';
+  });
+}
+function updateOrbLabelsFromLevels(){
+  for(const k in levels){
+    const label=$('#lvl-'+k);
+    if(label){label.textContent='Lv '+levels[k];}
+  }
+}
+
+/*************************************************/
+// Drag & Long-press interaction
+function attachOrbEvents(orb){
+  const key=orb.dataset.key;
+
+  function cleanup(){
+    window.removeEventListener('pointermove',onMove);
+    window.removeEventListener('pointerup',onUp);
+    clearTimeout(longPressTimer);
+    dragState=null;
+    highlightPot(false);
+  }
+
+  orb.addEventListener('pointerdown',e=>{
+    e.preventDefault();
+    dragState={key,sx:e.clientX,sy:e.clientY,dragging:false,clone:null};
+
+    longPressTimer=setTimeout(()=>{
+      if(!dragState||dragState.dragging)return; // still, no drag? then open slider
+      openSliderModal(key);
+      cleanup();
+    },400);
+
+    window.addEventListener('pointermove',onMove,{passive:false});
+    window.addEventListener('pointerup',onUp,{passive:false});
+  },{passive:false});
+
+  function onMove(e){
+    if(!dragState)return;
+    const dx=e.clientX-dragState.sx,dy=e.clientY-dragState.sy;
+    if(!dragState.dragging && Math.hypot(dx,dy)>8){
+      // start drag mode
+      dragState.dragging=true;
+      clearTimeout(longPressTimer);
+      const rect=orb.getBoundingClientRect();
+      const ghost=orb.cloneNode(true);
+      ghost.style.position='fixed';
+      ghost.style.left=rect.left+'px';
+      ghost.style.top =rect.top +'px';
+      ghost.style.transform='translate(-50%,-50%) scale(1.1)';
+      ghost.style.zIndex=9999;
+      ghost.style.boxShadow='0 0 20px rgba(245,179,1,.6)';
+      document.body.appendChild(ghost);
+      dragState.clone=ghost;
+    }
+    if(dragState.dragging && dragState.clone){
+      dragState.clone.style.left=e.clientX+'px';
+      dragState.clone.style.top =e.clientY+'px';
+      highlightPot(isOverPot(e.clientX,e.clientY));
+    }
+  }
+
+  function onUp(e){
+    if(dragState && dragState.dragging && dragState.clone){
+      const over=isOverPot(e.clientX,e.clientY);
+      dragState.clone.remove();
+      if(over){
+        addIngredient(key,1);
+        burstIntoPot();
+      }
+    }
+    cleanup();
+  }
+}
+function isOverPot(x,y){
+  const r=$('#brewPot').getBoundingClientRect();
+  return x>r.left && x<r.right && y>r.top && y<r.bottom;
+}
+function highlightPot(active){
+  $('#brewPot').classList.toggle('highlight',active);
+}
+
+/*************************************************/
+// Slider modal logic (long-press)
+function openSliderModal(k){
+  pendingSliderKey=k;
+  pendingSliderVal=levels[k]||0;
+  $('#modalLabel').textContent='Adjust '+niceName(k);
+  $('#modalCurrentVal').textContent=pendingSliderVal;
+  $('#modalRange').value=pendingSliderVal;
+  $('#sliderModal').classList.add('show');
+}
+$('#modalRange').addEventListener('input',e=>{
+  const v=parseInt(e.target.value,10)||0;
+  pendingSliderVal=clamp(v,1,7);
+  $('#modalCurrentVal').textContent=pendingSliderVal;
+});
+$('#modalCancel').addEventListener('click',()=>{
+  $('#sliderModal').classList.remove('show');
+  pendingSliderKey=null;
+});
+$('#modalOk').addEventListener('click',()=>{
+  if(pendingSliderKey){
+    const k=pendingSliderKey;
+    const newVal=pendingSliderVal;
+    levels[k]=clamp(newVal,1,7);
+    updateOrbLabelsFromLevels();
+    applyBrewPhysics();
+    if(hasStartedBrew){updateFlavorPreview();}
+    popup('Set '+niceName(k)+' = Lv '+levels[k]);
+    burstIntoPot();
+  }
+  $('#sliderModal').classList.remove('show');
+  pendingSliderKey=null;
+});
+$('#sliderModal').addEventListener('click',e=>{
+  if(e.target.id==='sliderModal'){
+    $('#sliderModal').classList.remove('show');
+    pendingSliderKey=null;
+  }
+});
+function niceName(key){
+  switch(key){
+    case 'aromaHop': return 'Aroma Hop';
+    case 'bitterHop': return 'Bitter Hop';
+    case 'malt': return 'Malt';
+    case 'wheat': return 'Wheat';
+    case 'freshFruit': return 'Fresh Fruit';
+    case 'driedFruit': return 'Dried Fruit';
+    case 'spice': return 'Spice';
+    default: return key;
+  }
+}
+
+/*************************************************/
+// Brew physics visuals
+function addIngredient(key,amt){
+  levels[key]=clamp((levels[key]||0)+amt,0,7);
+  updateOrbLabelsFromLevels();
+  applyBrewPhysics();
+  if(hasStartedBrew){updateFlavorPreview();}
+  popup('+'+(amt*5)+'% '+niceName(key));
+}
+function popup(text){
+  const layer=$('#popupLayer');
+  const el=document.createElement('div');
+  el.className='popupFloat';
+  el.style.left=(Math.random()*40-20)+'px';
+  el.textContent=text;
+  layer.appendChild(el);
+  setTimeout(()=>el.remove(),1000);
+}
+function applyBrewPhysics(){
+  const totalUnits=Object.values(levels).reduce((a,b)=>a+b,0);
+  const fillPct=Math.min(95,totalUnits*8);
+  $('#liquid').style.height=fillPct+'%';
+
+  const hazeVal=Math.min(0.6,(levels.wheat||0)/7*0.6).toFixed(2);
+  $('#liquid').style.setProperty('--haze-alpha',hazeVal);
+
+  const foamBoost=(levels.aromaHop+levels.freshFruit+levels.wheat*0.5);
+  $('#foamCap').style.height=Math.min(30,foamBoost*4)+'px';
+
+  const tempScore=(levels.spice||0)-(levels.freshFruit||0);
+  updateTempGauge(tempScore);
+}
+function updateTempGauge(score){
+  const clampedVal=clamp(score,-6,6);
+  const pct=(clampedVal+6)/12; // 0..1
+  const h=Math.round(40+pct*60);
+  const col=(pct<=0.5)
+    ? lerpColor('#00c2a8','#f5b301',pct/0.5)
+    : lerpColor('#f5b301','#ff4a3d',(pct-0.5)/0.5);
+  $('#tempFill').style.height=h+'px';
+  $('#tempFill').style.background=col;
+  $('#tempLabel').textContent=(60+Math.round(pct*30))+'°F';
+  $('#tempLabel').style.color=col;
+}
+function lerpColor(a,b,t){
+  const ca=hexToRgb(a),cb=hexToRgb(b);
+  const r=Math.round(ca.r+(cb.r-ca.r)*t);
+  const g=Math.round(ca.g+(cb.g-ca.g)*t);
+  const bb=Math.round(ca.b+(cb.b-ca.b)*t);
+  return `rgb(${r},${g},${bb})`;
+}
+function hexToRgb(h){
+  const c=parseInt(h.replace('#',''),16);
+  return {r:(c>>16)&255,g:(c>>8)&255,b:c&255};
+}
+function burstIntoPot(){
+  const pot=$('#brewPot');
+  pot.classList.add('highlight');
+  setTimeout(()=>pot.classList.remove('highlight'),300);
+}
+
+/*************************************************/
+// Final screen canvas
+function drawFinalBeer(){
+  const c=$('#finalBeer');
+  const ctx=c.getContext('2d');
+  const w=c.width,h=c.height;
+  ctx.clearRect(0,0,w,h);
+
+  // bg
+  const bg=ctx.createLinearGradient(0,0,0,h);
+  bg.addColorStop(0,'#0e1524');
+  bg.addColorStop(1,'#060a12');
+  ctx.fillStyle=bg;
+  ctx.fillRect(0,0,w,h);
+
+  // beer glass
+  const hue=STYLES[currentStyle]?.hue||'#e0a300';
+  const x=w*0.35,y=h*0.16,gw=w*0.30,gh=h*0.64;
+  const beerGrad=ctx.createLinearGradient(0,y,0,y+gh);
+  beerGrad.addColorStop(0,lighten(hue,0.3));
+  beerGrad.addColorStop(1,hue);
+
+  ctx.save();
+  roundRect(ctx,x,y,gw,gh,20);
+  ctx.clip();
+  ctx.fillStyle=beerGrad;
+  ctx.fill();
+
+  // foam head blobs
+  ctx.fillStyle='#fff8e8';
+  for(let i=0;i<8;i++){
+    const r=16+Math.random()*10;
+    ctx.beginPath();
+    ctx.arc(x+10+i*(gw-20)/7,y,r,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  // bubbles
+  for(let i=0;i<40;i++){
+    const bx=x+10+Math.random()*(gw-20);
+    const by=y+20+Math.random()*(gh-36);
+    const br=1+Math.random()*2.2;
+    ctx.strokeStyle='rgba(255,255,255,.35)';
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.arc(bx,by,br,0,Math.PI*2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // glass outline glow
+  ctx.save();
+  ctx.globalCompositeOperation='screen';
+  ctx.strokeStyle='rgba(255,255,255,.25)';
+  ctx.lineWidth=6;
+  roundRect(ctx,x-6,y-6,gw+12,gh+12,26);
+  ctx.stroke();
+  ctx.restore();
+
+  // headline
+  ctx.fillStyle='#e6edf3';
+  ctx.font='700 28px system-ui, -apple-system, Segoe UI, Roboto';
+  ctx.fillText((currentStyle||'Your brew')+' is ready!',16,44);
+}
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+function lighten(hex,p){
+  const c=parseInt(hex.replace('#',''),16);
+  let r=(c>>16)&255,g=(c>>8)&255,b=c&255;
+  r=Math.min(255,Math.round(r+(255-r)*p));
+  g=Math.min(255,Math.round(g+(255-g)*p));
+  b=Math.min(255,Math.round(b+(255-b)*p));
+  return "#"+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+
+/*************************************************/
+// Navigation / buttons
+function initNav(){
+  const goStep2Btn=$('#goStep2Btn');
+  if(goStep2Btn){
+    goStep2Btn.addEventListener('click',()=>{
+      if(!currentStyle){toast('Pick a style first');return;}
+      show('screen2');
+      requestAnimationFrame(initScreen2);
+    });
+  }
+
+  $('#backBtn').addEventListener('click',()=>{
+    show('screen1');
+  });
+
+  $('#startBrewBtn').addEventListener('click',()=>{
+    if(!currentStyle){toast('Pick a style first');return;}
+    revealFlavorPreview();
+  });
+
+  $('#decideBtn').addEventListener('click',()=>{
+    if(!currentStyle){toast('Pick a style first');return;}
+    burstIntoPot();
+    drawFinalBeer();
+    show('screen3');
+  });
+
+  $('#againBtn').addEventListener('click',()=>{
+    // reset to initial Step1 loop
+    hasStartedBrew=false;
+    $('#flavorCardWrap').style.display='none';
+    $('#actionsStep2').style.display='flex';
+    $('#decideBar').style.display='none';
+    show('screen1');
+  });
+}
+
+/*************************************************/
+// Boot
+function boot(){
+  buildStyleCards();
+  initNav();
+}
+
+document.addEventListener('DOMContentLoaded',boot);
+</script>
+</body>
+</html>
